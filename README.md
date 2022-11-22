@@ -1,6 +1,6 @@
 # AWFALI (aws-mfa-cli)
 A handy tool for generating AWS Session Token on the fly.   
-In the situations where a AWS IAM user is required to have MFA authentication even from the cli.    
+In the situations where an AWS IAM user is required to have MFA authentication even from the cli.    
 A user must generate a Session Token using MFA Serial Number or ARN and a MFA generated token.
 
 More information on [get-session-token](https://docs.aws.amazon.com/cli/latest/reference/sts/get-session-token.html)
