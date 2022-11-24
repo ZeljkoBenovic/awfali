@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"log"
 	"os"
@@ -15,14 +17,41 @@ func main() {
 	// get user flags
 	userConfig.Get().CheckValidity()
 
+	// check for IAM credentials to authorize the request
+	if !userConfig.AreIAMCredentialsSet() {
+		log.Println("could not find IAM credentials in flags, checking env vars for credentials")
+
+		// check for credentials in env vars
+		if os.Getenv("AWS_ACCESS_KEY_ID") == "" && os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+			log.Fatalln("could not find IAM credentials to authorize request")
+		}
+
+		*userConfig.accessKeyId.value = os.Getenv("AWS_ACCESS_KEY_ID")
+		*userConfig.secretAccessKey.value = os.Getenv("AWS_SECRET_ACCESS_KEY")
+	}
+
 	// setup aws config
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(*userConfig.region.value),
-		config.WithSharedConfigProfile(*userConfig.profile.value))
+		config.WithCredentialsProvider(aws.CredentialsProvider(credentials.NewStaticCredentialsProvider(
+			*userConfig.accessKeyId.value,
+			*userConfig.secretAccessKey.value,
+			""))),
+	)
 	if err != nil {
 		log.Fatalln("could not create aws config: ", err.Error())
 	}
+	// get serial number
+	if *userConfig.serialNumber.value == "virtual" {
+		idOut, err := sts.NewFromConfig(cfg).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+		if err != nil {
+			log.Println("could not get caller identity:", err.Error())
+		}
+
+		*userConfig.serialNumber.value = strings.Replace(*idOut.Arn, "user", "mfa", 1)
+	}
+
 	// get session token
 	crds, err := sts.NewFromConfig(cfg).GetSessionToken(ctx, &sts.GetSessionTokenInput{
 		SerialNumber:    userConfig.serialNumber.value,

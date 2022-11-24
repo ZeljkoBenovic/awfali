@@ -22,7 +22,7 @@ var userConfig = availableUserFlags{
 	serialNumber: userFlagStr{
 		value:        new(string),
 		name:         "serial",
-		defaultValue: "",
+		defaultValue: "virtual",
 		description:  "The identification number of the MFA device",
 	},
 	mfaToken: userFlagStr{
@@ -57,6 +57,18 @@ var userConfig = availableUserFlags{
 		defaultValue: getHomeDir() + "/.aws/credentials",
 		description:  "AWS credentials file location",
 	},
+	accessKeyId: userFlagStr{
+		value:        new(string),
+		name:         "access-key-id",
+		defaultValue: "",
+		description:  "IAM access key id to authenticate the request",
+	},
+	secretAccessKey: userFlagStr{
+		value:        new(string),
+		name:         "secret-access-key",
+		defaultValue: "",
+		description:  "IAM secret access key to authenticate the request",
+	},
 }
 
 type availableUserFlags struct {
@@ -68,6 +80,9 @@ type availableUserFlags struct {
 	sessionDuration userFlagInt
 	confFile        userFlagStr
 	credFile        userFlagStr
+
+	accessKeyId     userFlagStr
+	secretAccessKey userFlagStr
 }
 
 type userFlagStr struct {
@@ -92,6 +107,8 @@ func (f *availableUserFlags) Get() *availableUserFlags {
 	flag.StringVar(f.mode.value, f.mode.name, f.mode.defaultValue, f.mode.description)
 	flag.StringVar(f.confFile.value, f.confFile.name, f.confFile.defaultValue, f.confFile.description)
 	flag.StringVar(f.credFile.value, f.credFile.name, f.credFile.defaultValue, f.credFile.description)
+	flag.StringVar(f.accessKeyId.value, f.accessKeyId.name, f.accessKeyId.defaultValue, f.accessKeyId.description)
+	flag.StringVar(f.secretAccessKey.value, f.secretAccessKey.name, f.secretAccessKey.defaultValue, f.secretAccessKey.description)
 	flag.IntVar(f.sessionDuration.value, f.sessionDuration.name, f.sessionDuration.defaultValue, f.sessionDuration.description)
 
 	flag.Parse()
@@ -106,6 +123,10 @@ func (f *availableUserFlags) CheckValidity() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
+}
+
+func (f *availableUserFlags) AreIAMCredentialsSet() bool {
+	return *f.accessKeyId.value != "" && *f.secretAccessKey.value != ""
 }
 
 func (f *availableUserFlags) SessionInt32() *int32 {
